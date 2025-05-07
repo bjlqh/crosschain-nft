@@ -7,7 +7,8 @@ import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.s
 import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import {IERC20} from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/token/ERC20/utils/SafeERC20.sol";
-import {MyToken} from "./MyToken.sol";
+import {WrappedMyToken} from "./WrappedMyToken.sol";
+
 
 /**
  * THIS IS AN EXAMPLE CONTRACT THAT USES HARDCODED VALUES FOR CLARITY.
@@ -16,7 +17,7 @@ import {MyToken} from "./MyToken.sol";
  */
 
 /// @title - A simple messenger contract for sending/receiving string data across chains.
-contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
+contract NFTPoolBurnAndMint is CCIPReceiver, OwnerIsCreator {
     using SafeERC20 for IERC20;
 
     // Custom errors to provide more descriptive revert messages.
@@ -47,14 +48,20 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
     string private s_lastReceivedText; // Store the last received text.
 
     IERC20 private s_linkToken;
-    MyToken public nft;
+    WrappedMyToken public wnft;
+
+    //由newOwner和tokenId组成的结构体
+    struct RequestData {
+        uint256 tokenId; 
+        address newOwner;
+    }
 
     /// @notice Constructor initializes the contract with the router address.
     /// @param _router The address of the router contract.
     /// @param _link The address of the link contract.
-    constructor(address _router, address _link, address nftAddr) CCIPReceiver(_router) {
+    constructor(address _router, address _link, address wnftAddr) CCIPReceiver(_router) {
         s_linkToken = IERC20(_link);
-        nft = MyToken(nftAddr);
+        wnft = WrappedMyToken(wnftAddr);
     }
 
 
@@ -155,6 +162,14 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
         internal
         override
     {
+        //address newOwner 跨链的NFT它要在目标链上去mint,它的owner是谁？
+        //uint256 tokenId 
+        RequestData memory rd = abi.decode(any2EvmMessage.data, (RequestData));
+        uint256 tokenId = rd.tokenId;
+        address newOwner = rd.newOwner;
+
+        wnft.mintTokenWithSpecificTokenId(newOwner, tokenId); // mint the token to the new owner
+
         s_lastReceivedMessageId = any2EvmMessage.messageId; // fetch the messageId
         //如果我们想要在目标链上去mint NFT的话，data里面至少要包含2个信息，一个是tokenId，一个是mint给谁(receiver的地址)
         s_lastReceivedText = abi.decode(any2EvmMessage.data, (string)); // abi-decoding of the sent text

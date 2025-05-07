@@ -131,4 +131,38 @@ NFT跨链示意图
 
 使用CCIP协议
 
-1:24:34
+![示例图片](images/6.png)
+我们需要通过NFTPoolLockAndRelease发送一条信息:NFT已经锁在这个合约地址里面了。
+然后发送信息告诉CCIP，被锁的token它的tokenId是什么，我要发送过去在新的池子里面去mint一个新的NFT,新的NFT它的owner是谁。需要把这两个基础数据写在message里面（tokenId, owner）。同时还有destination selector 和 receiver address, payment method
+
+
+首先完成在源链上部署的池子：
+
+_ccipReceive接收的信息是Client.Any2EVMMessage
+_buildCCIPMessage发送的信息是Client.EVM2AnyMessage
+
+sendMessagePayLINK(){
+
+先_buildCCIPMessage
+
+跨链是由Router合约去完成的        
+IRouterClient router = IRouterClient(this.getRouter());
+
+发送
+messageId = router.ccipSend(_destinationChainSelector, evm2AnyMessage);
+}
+
+我们需要做的事
+lockAndSendNFT(tokenId, newOwner){
+    把他们包装在payload里面，将payload当做text传输进去。在通过text生成要传输的信息
+}
+
+
+接着完成在目标链上部署NFT的池子：
+它如何接收发来的信息，并且WrappedNFT进行mint
+
+1:38:40
+
+从目标链上burn，在源链上unlock NFT，发送给owner的地址
+1:46:13
+
