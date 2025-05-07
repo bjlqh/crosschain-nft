@@ -123,3 +123,12 @@ NFT跨链示意图
 
 代码
 1:07:18
+
+通过MyToken合约对NFT在pool中锁定，通过Wrapped在另一个pool中铸造一个新的NFT
+
+10.NFT Pool
+锁定和解锁定的池子，另一个是burn和mint池子
+
+使用CCIP协议
+
+1:24:34
