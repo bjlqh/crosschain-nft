@@ -166,3 +166,7 @@ lockAndSendNFT(tokenId, newOwner){
 从目标链上burn，在源链上unlock NFT，发送给owner的地址
 1:46:13
 
+
+11.多链部署脚本
+1:55:00
+

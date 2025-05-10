@@ -37,11 +37,9 @@ contract NFTPoolBurnAndMint is CCIPReceiver, OwnerIsCreator {
     );
 
     // Event emitted when a message is received from another chain.
-    event MessageReceived(
-        bytes32 indexed messageId, // The unique ID of the CCIP message.
-        uint64 indexed sourceChainSelector, // The chain selector of the source chain.
-        address sender, // The address of the sender from the source chain.
-        string text // The text that was received.
+    event TokenMinted(
+        uint256 tokenId,
+        address newOwner
     );
 
     bytes32 private s_lastReceivedMessageId; // Store the last received messageId.
@@ -73,25 +71,22 @@ contract NFTPoolBurnAndMint is CCIPReceiver, OwnerIsCreator {
         _;
     }
 
-    /**
-     * 通过这个函数去发送让CCIP所知道一些数据。
-     * 在发送之前要确保NFT在NFTPoolLockAndRelease地址里被锁定了（NFT被转移到这个合约中）
-     * @param tokenId 
-     * @param newOwner 
-     * @param chainSelector 
-     * @param recevier 
-     */
-    function lockAndSendNFT(uint256 tokenId, 
+    
+    function burnAndSendNFT(uint256 tokenId, 
                             address newOwner, 
                             uint64 chainSelector, 
                             address recevier) public returns (bytes32) {
         //transfer NFT to this address to lock the NFT
-        //把NFT（tokenId）从原来这个holder的地址，转移给我们这个NFTPool这个地址里面,也就是锁定了
-        nft.transferFrom(msg.sender, address(this), tokenId);   //ERC721里的一个函数，nft的持有人把他的nft从他的地址里面发送给接受者
+        //nft的owner才有权限去烧
+        wnft.transferFrom(msg.sender, address(this), tokenId);   //ERC721里的一个函数，nft的持有人把他的nft从他的地址里面发送给接受者
+
+        //burn the wnft before send to ccip 
+        wnft.burn(tokenId);
+
         //constract data to be sent
-        bytes memory payload = abi.encode(tokenId, newOwner); // encode the tokenId and newOwner into bytes
+        bytes memory payload = abi.encode(tokenId, newOwner);
         //使用标准合约去发送
-        bytes messageId = sendMessagePayLINK(chainSelector, recevier, payload); // send the message to the destination chain
+        bytes32 messageId = sendMessagePayLINK(chainSelector, recevier, payload); // send the message to the destination chain
         return messageId;
     }
 
@@ -170,16 +165,7 @@ contract NFTPoolBurnAndMint is CCIPReceiver, OwnerIsCreator {
 
         wnft.mintTokenWithSpecificTokenId(newOwner, tokenId); // mint the token to the new owner
 
-        s_lastReceivedMessageId = any2EvmMessage.messageId; // fetch the messageId
-        //如果我们想要在目标链上去mint NFT的话，data里面至少要包含2个信息，一个是tokenId，一个是mint给谁(receiver的地址)
-        s_lastReceivedText = abi.decode(any2EvmMessage.data, (string)); // abi-decoding of the sent text
-
-        emit MessageReceived(
-            any2EvmMessage.messageId,
-            any2EvmMessage.sourceChainSelector, // fetch the source chain identifier (aka selector)
-            abi.decode(any2EvmMessage.sender, (address)), // abi-decoding of the sender address,
-            abi.decode(any2EvmMessage.data, (string))
-        );
+        emit TokenMinted (tokenId, newOwner);
     }
 
     /// @notice Construct a CCIP message.

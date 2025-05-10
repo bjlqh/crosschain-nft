@@ -9,7 +9,7 @@ contract WrappedMyToken is MyToken {
         string memory tokenSymbol
     ) MyToken(tokenName, tokenSymbol) {}
 
-    //需要去铸造特定id的通证
+    //需要去铸造特定id的通证, 生产环境需要加权限去校验
     function mintTokenWithSpecificTokenId(address to, uint256 tokenId) public {
         _safeMint(to, tokenId);
     }

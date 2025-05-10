@@ -36,11 +36,9 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
     );
 
     // Event emitted when a message is received from another chain.
-    event MessageReceived(
-        bytes32 indexed messageId, // The unique ID of the CCIP message.
-        uint64 indexed sourceChainSelector, // The chain selector of the source chain.
-        address sender, // The address of the sender from the source chain.
-        string text // The text that was received.
+    event TokenUnlocked (
+        uint256 tokenId,
+        address sender
     );
 
     bytes32 private s_lastReceivedMessageId; // Store the last received messageId.
@@ -48,6 +46,15 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
 
     IERC20 private s_linkToken;
     MyToken public nft;
+
+    //由newOwner和tokenId组成的结构体
+    struct RequestData {
+        uint256 tokenId; 
+        address newOwner;
+    }
+
+    //记录被锁定的nft
+    mapping (uint256 => bool) tokenLocked;
 
     /// @notice Constructor initializes the contract with the router address.
     /// @param _router The address of the router contract.
@@ -66,14 +73,6 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
         _;
     }
 
-    /**
-     * 通过这个函数去发送让CCIP所知道一些数据。
-     * 在发送之前要确保NFT在NFTPoolLockAndRelease地址里被锁定了（NFT被转移到这个合约中）
-     * @param tokenId 
-     * @param newOwner 
-     * @param chainSelector 
-     * @param recevier 
-     */
     function lockAndSendNFT(uint256 tokenId, 
                             address newOwner, 
                             uint64 chainSelector, 
@@ -84,7 +83,8 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
         //constract data to be sent
         bytes memory payload = abi.encode(tokenId, newOwner); // encode the tokenId and newOwner into bytes
         //使用标准合约去发送
-        bytes messageId = sendMessagePayLINK(chainSelector, recevier, payload); // send the message to the destination chain
+        bytes32 messageId = sendMessagePayLINK(chainSelector, recevier, payload); // send the message to the destination chain
+        tokenLocked[tokenId] = true;
         return messageId;
     }
 
@@ -155,16 +155,24 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
         internal
         override
     {
-        s_lastReceivedMessageId = any2EvmMessage.messageId; // fetch the messageId
-        //如果我们想要在目标链上去mint NFT的话，data里面至少要包含2个信息，一个是tokenId，一个是mint给谁(receiver的地址)
-        s_lastReceivedText = abi.decode(any2EvmMessage.data, (string)); // abi-decoding of the sent text
+        RequestData memory rd = abi.decode(any2EvmMessage.data, (RequestData));
 
-        emit MessageReceived(
-            any2EvmMessage.messageId,
-            any2EvmMessage.sourceChainSelector, // fetch the source chain identifier (aka selector)
-            abi.decode(any2EvmMessage.sender, (address)), // abi-decoding of the sender address,
-            abi.decode(any2EvmMessage.data, (string))
-        );
+        /**
+         * 这里就不是mint一个新的nft出来了。而是从池子里解锁，只不过它的owner不再是当时那个minter
+         * 而是现在这个池子的地址，所以现在我们需要把这个池子的ntf拿出来。转移给之前的owner.
+         * 所以我们只需要把nft从当前的合约地址，转移给newOwner
+         */
+        uint256 tokenId = rd.tokenId;
+        address newOwner = rd.newOwner;
+
+        
+        //check if the nft is locked
+        require(tokenLocked[tokenId], "The token is not locked");
+
+        // transfer token from this address to new owner
+        nft.transferFrom(address(this), newOwner, tokenId);
+
+        emit TokenUnlocked(tokenId, newOwner);
     }
 
     /// @notice Construct a CCIP message.

@@ -21,7 +21,8 @@ contract MyToken is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, 
         Ownable(msg.sender)
     {}
 
-    function safeMint(address to) public onlyOwner
+    //这里也需要对权限进行控制，防止恶意攻击
+    function safeMint(address to) public
     {
         uint256 tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
