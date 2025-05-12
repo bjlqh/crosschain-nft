@@ -170,3 +170,33 @@ lockAndSendNFT(tokenId, newOwner){
 11.多链部署脚本
 1:55:00
 
+
+引入hardhat插件
+https://github.com/wighawag/hardhat-deploy-ethers#readme
+
+
+创建deploy部署脚本
+用js的代码表达一些逻辑。然后将逻辑export,再让hardhat执行export出来的这些逻辑，就完成了部署的操作。
+
+
+12.chainlink-local
+
+https://github.com/smartcontractkit/chainlink-local/blob/main/src/ccip/CCIPLocalSimulator.sol
+
+uint64 chainSelector_,     标识当前链的 CCIP 链唯一 ID，用于跨链消息的路由选择。
+IRouterClient sourceRouter_,     源链的路由器合约，用于发送跨链消息（如调用 sendMessage）。
+IRouterClient destinationRouter_,    目标链的路由器合约，用于接收跨链消息（如调用 onMessageReceived）。
+WETH9 wrappedNative_,      当前链的 封装原生代币合约（如 WETH），用于支付跨链手续费。
+LinkToken linkToken_,      LINK 代币合约地址，通常用于支付 CCIP 服务的费用（如消息发送手续费）。
+BurnMintERC677Helper ccipBnM_,  CCIP 协议中的 可铸造/销毁的基础代币（如跨链稳定币的桥接代币）。
+BurnMintERC677Helper ccipLnM_   CCIP 协议中的 流动性代币（如用于流动性池的激励代币或治理代币）。
+
+在模拟的环境chainSelector使用同一个chainId就行了。
+同样linkToken也是在sourceChain，destinationChain使用不同的地址，在模拟环境用同一个。
+
+>npx hardhat deploy
+
+
+13.单元测试
+2:31:40
+

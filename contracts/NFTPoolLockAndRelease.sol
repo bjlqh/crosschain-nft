@@ -53,9 +53,6 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
         address newOwner;
     }
 
-    //记录被锁定的nft
-    mapping (uint256 => bool) tokenLocked;
-
     /// @notice Constructor initializes the contract with the router address.
     /// @param _router The address of the router contract.
     /// @param _link The address of the link contract.
@@ -84,7 +81,6 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
         bytes memory payload = abi.encode(tokenId, newOwner); // encode the tokenId and newOwner into bytes
         //使用标准合约去发送
         bytes32 messageId = sendMessagePayLINK(chainSelector, recevier, payload); // send the message to the destination chain
-        tokenLocked[tokenId] = true;
         return messageId;
     }
 
@@ -165,11 +161,8 @@ contract NFTPoolLockAndRelease is CCIPReceiver, OwnerIsCreator {
         uint256 tokenId = rd.tokenId;
         address newOwner = rd.newOwner;
 
-        
-        //check if the nft is locked
-        require(tokenLocked[tokenId], "The token is not locked");
-
         // transfer token from this address to new owner
+        //transferFrom是ERC721的函数，会判断这个nft是不是在当前地址之下。
         nft.transferFrom(address(this), newOwner, tokenId);
 
         emit TokenUnlocked(tokenId, newOwner);
